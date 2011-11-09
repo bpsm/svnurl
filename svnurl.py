@@ -84,7 +84,7 @@ svnurl  -p        -a   [  -u   |  -n    ] [DIR]
 class SvnURL(object):
     svn_url_pat = re.compile(r"^(svn([+]ssh)?|http[s]?|file)://.*$")
     pat=re.compile(r"""([^ ]+)/([^ /]+)/
-                    (TRUNK|BRANCHES|TAGS|trunk|branches|tags)
+                    (TRUNK|BRANCHES|TAGS|trunk|branches|tags|Trunk|Branches|Tags)
                     (/([^ ]*))?$""", re.X)
     def __init__(self, url):
         if not SvnURL.svn_url_pat.match(url):
@@ -100,6 +100,7 @@ class SvnURL(object):
             self.project_root_url = m.group(1) + "/" + m.group(2)
             self.branch_kind = m.group(3).lower()
             self.lowercase = (m.group(3) == self.branch_kind)
+            self.titlecase = (m.group(3) == self.branch_kind.title())
             self.branch_container_url = m.group(1) + "/" + m.group(2) + "/" + m.group(3)
             if self.branch_kind == "trunk":
                 self.branch_name = None
@@ -120,8 +121,13 @@ class SvnURL(object):
 
             self.branch_kind = None
             self.lowercase = True
+            self.titlecase = False
             for line in svn_lsdirs(self.project_root_url):
-                if line in ("TRUNK", "BRANCHES", "TAGS"):
+                if line in ("TRUNK", "BRANCHES", "TAGS"):              
+                    self.titlecase = False
+                    self.lowercase = False
+                elif line in ("Trunk", "Branches", "Tags"):
+                    self.titlecase = True
                     self.lowercase = False
             self.online = True
             self.branch_container_url = None
@@ -135,6 +141,8 @@ class SvnURL(object):
     def correct_case(self, str):
         if self.lowercase:
             return str.lower()
+        elif self.titlecase:
+            return str.title()
         else:
             return str.upper()
 
@@ -297,7 +305,7 @@ def do_project_dir(flags, args):
         print u.project_root_url
 
 def do_project_all_dir(flags, args):
-    containers = set(["TRUNK", "TAGS", "BRANCHES", "trunk", "tags", "branches"])
+    containers = set(["TRUNK", "TAGS", "BRANCHES", "trunk", "tags", "branches", "Trunk", "Branches", "Tags"])
     def find_projects(url):
         dirs = set(svn_lsdirs(url))
         cnt = dirs.intersection(containers)
